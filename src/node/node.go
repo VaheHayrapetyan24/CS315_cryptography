@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -56,9 +58,12 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	portPtr := flag.Int("port", 8080, "Port to run the server on")
+	flag.Parse()
+
 	http.HandleFunc("/message", messageHandler)
 
-	port := ":8081"
+	port := fmt.Sprintf(":%d", *portPtr)
 	log.Printf("Starting server on port %s", port)
 
 	if err := http.ListenAndServe(port, nil); err != nil {

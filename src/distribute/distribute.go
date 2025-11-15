@@ -3,13 +3,17 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"log"
 	"net/http"
+	"os"
 	"sync"
+	"turbobloom/models"
 )
 
 var nodeCounter uint32 = 0
-var mutex sync.Mutex
+var keyMutex sync.Mutex
+var paramsMutex sync.Mutex
 
 const q uint64 = 19
 const lambda uint32 = 2
@@ -30,7 +34,21 @@ var D = [lambda + 1][lambda + 1]uint64{
 
 var A [n][lambda + 1]uint64
 
-func initialize() {
+func initialize(filename string) {
+	// TODO: this should read the file and set q, n, lambda, d
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatal("Failed to read parameters file")
+	}
+
+	var config Parameters
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		log.Fatal("Failed to parse parameters file")
+	}
+
+	log.Printf("%s", config)
+
 	for i := uint32(0); i <= lambda; i++ {
 		for j := uint32(0); j < n; j++ {
 			A[j][i] = 0
@@ -42,25 +60,19 @@ func initialize() {
 	}
 }
 
-var ErrKeysExhausted = errors.New("Keys are exhausted. Cannot support more nodes.")
+var ErrKeysExhausted = errors.New("keys are exhausted")
 
-type DistributeResponse struct {
-	Id   uint32             `json:"id"`
-	Gcol [lambda + 1]uint64 `json:"g_col"`
-	Acol [lambda + 1]uint64 `json:"a_col"`
-}
-
-func getNextKey() (uint32, [lambda + 1]uint64, [lambda + 1]uint64, error) {
-	mutex.Lock()
+func getNextKey() (uint32, []uint64, []uint64, error) {
+	keyMutex.Lock()
 
 	if nodeCounter == n {
-		return 0, [lambda + 1]uint64{}, [lambda + 1]uint64{}, ErrKeysExhausted
+		return 0, []uint64{}, []uint64{}, ErrKeysExhausted
 	}
 
 	id := nodeCounter
 	nodeCounter++
-	mutex.Unlock()
-	return id, G_t[id], A[id], nil
+	keyMutex.Unlock()
+	return id, G_t[id][:], A[id][:], nil
 }
 
 func distributeHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +87,7 @@ func distributeHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 
-	response := DistributeResponse{
+	response := models.DistributeResponse{
 		Id:   nodeId,
 		Gcol: g_col,
 		Acol: a_col,
@@ -88,8 +100,16 @@ func distributeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// func parametersHandler(w http.ResponseWriter, r *http.Request) {
+// 	log.Printf("Received parameters request")
+
+// }
+
 func main() {
-	initialize()
+	filename := flag.String("config", "./parameters/parameters.json", "Relative path to parameters file")
+	flag.Parse()
+
+	initialize(*filename)
 
 	http.HandleFunc("/distribute", distributeHandler)
 
