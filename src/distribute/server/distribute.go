@@ -4,76 +4,82 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"sync"
-	distribute_models "turbobloom/distribute/models"
-	shared_models "turbobloom/models"
+	dm "turbobloom/distribute/models" // distribute models
+	sm "turbobloom/models"            // shared models
 )
 
-var nodeCounter uint32 = 0
 var keyMutex sync.Mutex
-var paramsMutex sync.Mutex
 
-const q uint64 = 19
-const lambda uint32 = 2
-const n uint32 = 5
+var filename *string
 
-var G_t = [n][lambda + 1]uint64{ // this is transpose of G
-	{1, 2, 4},
-	{1, 4, 16},
-	{1, 8, 7},
-	{1, 16, 9},
-	{1, 13, 17},
-}
-var D = [lambda + 1][lambda + 1]uint64{
-	{6, 15, 14},
-	{15, 1, 8},
-	{14, 8, 3},
-}
-
-var A [n][lambda + 1]uint64
-
-func initialize(filename string) {
-	// TODO: this should read the file and set q, n, lambda, d
-	data, err := os.ReadFile(filename)
+func readParams() dm.Parameters {
+	data, err := os.ReadFile(*filename)
 	if err != nil {
 		log.Fatal("Failed to read parameters file")
 	}
 
-	var config distribute_models.Parameters
+	var config dm.Parameters
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		log.Fatal("Failed to parse parameters file")
 	}
 
-	log.Printf("%s", config)
+	return config
+}
 
-	for i := uint32(0); i <= lambda; i++ {
-		for j := uint32(0); j < n; j++ {
-			A[j][i] = 0
-			for k := uint32(0); k <= lambda; k++ {
-				A[j][i] += (D[i][k] * G_t[j][k]) % q
-			}
-			A[j][i] %= q
-		}
+func updateCount(params dm.Parameters) {
+	data, err := json.Marshal(params)
+	if err != nil {
+		fmt.Printf("Error marshaling parameters: %v\n", err)
+		return
 	}
+
+	err = os.WriteFile(*filename, data, 0600)
+	if err != nil {
+		// maybe delete the file and fatally exit the server
+		fmt.Printf("Error writing file: %v\n", err)
+		return
+	}
+}
+
+func calculateAColumn(ind uint32, config dm.Parameters) []uint64 {
+	a_col := make([]uint64, config.Lambda+1)
+	for i := uint32(0); i <= config.Lambda; i++ {
+		a_col[i] = 0
+		for k := uint32(0); k <= config.Lambda; k++ {
+			a_col[i] += (config.D[i][k] * config.G[ind][k]) % config.Q
+		}
+		a_col[i] %= config.Q
+	}
+	return a_col
 }
 
 var ErrKeysExhausted = errors.New("keys are exhausted")
 
 func getNextKey() (uint32, []uint64, []uint64, error) {
 	keyMutex.Lock()
+	defer keyMutex.Unlock()
 
-	if nodeCounter == n {
+	var config dm.Parameters = readParams()
+
+	if config.Count == config.N {
+		// we might want to delete the file and exit the server
 		return 0, []uint64{}, []uint64{}, ErrKeysExhausted
 	}
 
-	id := nodeCounter
-	nodeCounter++
-	keyMutex.Unlock()
-	return id, G_t[id][:], A[id][:], nil
+	id := config.Count
+	config.Count += 1
+	// I want this to be executed in the current lock
+	updateCount(config)
+	g_col := config.G[id]
+	a_col := calculateAColumn(id, config)
+
+	return id, g_col, a_col, nil
 }
 
 func distributeHandler(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +94,7 @@ func distributeHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 
-	response := shared_models.DistributeResponse{
+	response := sm.DistributeResponse{
 		Id:   nodeId,
 		Gcol: g_col,
 		Acol: a_col,
@@ -101,16 +107,11 @@ func distributeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func parametersHandler(w http.ResponseWriter, r *http.Request) {
-// 	log.Printf("Received parameters request")
-
-// }
-
 func main() {
-	filename := flag.String("config", "./parameters/parameters.json", "Relative path to parameters file")
+	filename = flag.String("config", "./parameters/parameters.json", "Relative path to parameters file")
 	flag.Parse()
 
-	initialize(*filename)
+	readParams()
 
 	http.HandleFunc("/distribute", distributeHandler)
 

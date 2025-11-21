@@ -133,7 +133,6 @@ func main() {
 		}
 	}
 
-	// Create parameters struct
 	params := distribute_models.Parameters{
 		Q:      q,
 		N:      n,
@@ -143,14 +142,12 @@ func main() {
 		Count:  0,
 	}
 
-	// Marshal to JSON
 	data, err := json.Marshal(params)
 	if err != nil {
 		fmt.Printf("Error marshaling parameters: %v\n", err)
 		return
 	}
 
-	// Write to file
 	err = os.WriteFile(filepath, data, 0600)
 	if err != nil {
 		fmt.Printf("Error writing file: %v\n", err)

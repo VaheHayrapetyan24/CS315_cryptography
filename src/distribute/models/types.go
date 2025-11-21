@@ -2,7 +2,7 @@ package models
 
 type Parameters struct {
 	Q      uint64     `json:"q"`
-	N      uint32     `json:"n"` // probably won't be needing this one if planning to increase dynamically
+	N      uint32     `json:"n"`
 	Count  uint32     `json:"count"`
 	Lambda uint32     `json:"lambda"`
 	D      [][]uint64 `json:"d"`
