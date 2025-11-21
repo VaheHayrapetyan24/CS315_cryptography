@@ -1,4 +1,4 @@
-package main
+package models
 
 type Parameters struct {
 	Q      uint64     `json:"q"`

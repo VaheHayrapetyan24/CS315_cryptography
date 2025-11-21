@@ -8,7 +8,8 @@ import (
 	"net/http"
 	"os"
 	"sync"
-	"turbobloom/models"
+	distribute_models "turbobloom/distribute/models"
+	shared_models "turbobloom/models"
 )
 
 var nodeCounter uint32 = 0
@@ -41,7 +42,7 @@ func initialize(filename string) {
 		log.Fatal("Failed to read parameters file")
 	}
 
-	var config Parameters
+	var config distribute_models.Parameters
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		log.Fatal("Failed to parse parameters file")
@@ -87,7 +88,7 @@ func distributeHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 
-	response := models.DistributeResponse{
+	response := shared_models.DistributeResponse{
 		Id:   nodeId,
 		Gcol: g_col,
 		Acol: a_col,
