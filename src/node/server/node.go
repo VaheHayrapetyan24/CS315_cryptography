@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	shared_types "turbobloom/shared/types"
 )
 
 // var nodeCounter uint32 = 0
@@ -57,11 +58,31 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func handlerGenerator(distributeResponse shared_types.DistributeResponse) http.HandlerFunc {
+	return messageHandler(w, r)
+}
+
+func readParams(filepath string) shared_types.DistributeResponse {
+	data, err := os.ReadFile(filepath)
+	if err != nil {
+		log.Fatalf("Failed to read parameters file: %v", err)
+	}
+
+	var distributeResponse shared_types.DistributeResponse
+	err = json.Unmarshal(data, &distributeResponse)
+	if err != nil {
+		log.Fatalf("Failed to parse parameters file: %v", err)
+	}
+
+	return distributeResponse
+}
+
 func main() {
 	portPtr := flag.Int("port", 8080, "Port to run the server on")
+	filename := flag.String("config", "./parameters/parameters.json", "Relative path to parameters file")
 	flag.Parse()
 
-	http.HandleFunc("/message", messageHandler)
+	http.HandleFunc("/message", handlerGenerator(readParams(*filename)))
 
 	port := fmt.Sprintf(":%d", *portPtr)
 	log.Printf("Starting server on port %s", port)

@@ -1,4 +1,4 @@
-package models
+package shared
 
 type DistributeResponse struct {
 	Id   uint32   `json:"id"`
