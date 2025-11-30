@@ -7,61 +7,73 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"turbobloom/shared"
 )
 
-// var nodeCounter uint32 = 0
-// var mutex sync.Mutex
-
-const q uint64 = 19
-const lambda uint32 = 2
-const n uint32 = 5
-
-var G_t = [n][lambda + 1]uint64{ // this is transpose of G
-	{1, 2, 4},
-	{1, 4, 16},
-	{1, 8, 7},
-	{1, 16, 9},
-	{1, 13, 17},
+type MessagePayload struct {
+	Gcol    []uint64 `json:"g_col"`
+	Message string   `json:"message"`
 }
 
-var MyId uint32 = 2
-var U = [lambda + 1]uint64{5, 14, 18}
-
-func getKey(id uint32) uint64 {
+func getKey(Gcol []uint64, Acol []uint64, q uint64) uint64 {
 	var k uint64 = 0
-	for i := uint32(0); i <= lambda; i++ {
-		k += (U[i] * G_t[id][i]) % q
+	for i := 0; i < len(Gcol) && i < len(Acol); i++ {
+		k += (Acol[i] * Gcol[i]) % q
 	}
 	return k % q
 }
 
-func messageHandler(w http.ResponseWriter, r *http.Request) {
-	nodeIdHeader := r.Header.Get("x-node-id")
-	if nodeIdHeader == "" {
-		http.Error(w, "x-node-id header is required", http.StatusBadRequest)
+func messageHandler(w http.ResponseWriter, r *http.Request, nodeConfig shared.DistributeResponse) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	nodeId64, err := strconv.ParseUint(nodeIdHeader, 10, 32)
+	var payload MessagePayload
+	err := json.NewDecoder(r.Body).Decode(&payload)
 	if err != nil {
-		http.Error(w, "x-node-id header is not a valid unsigned int", http.StatusBadRequest)
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		log.Printf("Failed to decode message payload: %v", err)
 		return
 	}
 
-	log.Printf("Received encoded message %v", nodeId64)
-	nodeId32 := uint32(nodeId64)
+	if len(payload.Gcol) == 0 {
+		http.Error(w, "Gcol is required", http.StatusBadRequest)
+		return
+	}
 
-	k := getKey(nodeId32)
+	log.Printf("Received message with Gcol of length %d: %v", len(payload.Gcol), payload.Gcol)
+	log.Printf("Message content: %s", payload.Message)
 
-	log.Printf("Resulting key %v", k)
+	// Calculate the key using the received Gcol and the node's Acol
+	k := getKey(payload.Gcol, nodeConfig.Acol, nodeConfig.Q)
+	log.Printf("Calculated key: %v", k)
 
+	// TODO: Process the message using the calculated key
+	// For now, just acknowledge receipt
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "received"})
 }
 
-func handlerGenerator(distributeResponse shared.DistributeResponse) http.HandlerFunc {
-	return messageHandler(w, r)
+func gcolHandler(w http.ResponseWriter, r *http.Request, nodeConfig shared.DistributeResponse) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"g_col": nodeConfig.Gcol,
+	})
+}
+
+func handlerGenerator(handler func(http.ResponseWriter, *http.Request, shared.DistributeResponse), nodeConfig shared.DistributeResponse) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		handler(w, r, nodeConfig)
+	}
 }
 
 func readParams(filepath string) shared.DistributeResponse {
@@ -84,7 +96,9 @@ func main() {
 	filename := flag.String("config", "./parameters/parameters.json", "Relative path to parameters file")
 	flag.Parse()
 
-	http.HandleFunc("/message", handlerGenerator(readParams(*filename)))
+	nodeConfig := readParams(*filename)
+	http.HandleFunc("/message", handlerGenerator(messageHandler, nodeConfig))
+	http.HandleFunc("/gcol", handlerGenerator(gcolHandler, nodeConfig))
 
 	port := fmt.Sprintf(":%d", *portPtr)
 	log.Printf("Starting server on port %s", port)
