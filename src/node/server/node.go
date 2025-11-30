@@ -7,20 +7,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"turbobloom/node/nodeUtils"
 	"turbobloom/shared"
 )
 
 type MessagePayload struct {
 	Gcol    []uint64 `json:"g_col"`
 	Message string   `json:"message"`
-}
-
-func getKey(Gcol []uint64, Acol []uint64, q uint64) uint64 {
-	var k uint64 = 0
-	for i := 0; i < len(Gcol) && i < len(Acol); i++ {
-		k += (Acol[i] * Gcol[i]) % q
-	}
-	return k % q
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request, nodeConfig shared.DistributeResponse) {
@@ -46,7 +39,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request, nodeConfig shared.Di
 	log.Printf("Message content: %s", payload.Message)
 
 	// Calculate the key using the received Gcol and the node's Acol
-	k := getKey(payload.Gcol, nodeConfig.Acol, nodeConfig.Q)
+	k := nodeUtils.GetKey(payload.Gcol, nodeConfig.Acol, nodeConfig.Q)
 	log.Printf("Calculated key: %v", k)
 
 	// TODO: Process the message using the calculated key
