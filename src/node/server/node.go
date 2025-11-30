@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
-	shared_types "turbobloom/shared/types"
+	"turbobloom/shared"
 )
 
 // var nodeCounter uint32 = 0
@@ -58,17 +60,17 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func handlerGenerator(distributeResponse shared_types.DistributeResponse) http.HandlerFunc {
+func handlerGenerator(distributeResponse shared.DistributeResponse) http.HandlerFunc {
 	return messageHandler(w, r)
 }
 
-func readParams(filepath string) shared_types.DistributeResponse {
+func readParams(filepath string) shared.DistributeResponse {
 	data, err := os.ReadFile(filepath)
 	if err != nil {
 		log.Fatalf("Failed to read parameters file: %v", err)
 	}
 
-	var distributeResponse shared_types.DistributeResponse
+	var distributeResponse shared.DistributeResponse
 	err = json.Unmarshal(data, &distributeResponse)
 	if err != nil {
 		log.Fatalf("Failed to parse parameters file: %v", err)

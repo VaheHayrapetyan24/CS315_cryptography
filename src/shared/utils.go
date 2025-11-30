@@ -1,8 +1,14 @@
 package shared
 
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+)
 
-
-func readUint64WithDefault(prompt string, defaultVal uint64) uint64 {
+func ReadUint64WithDefault(prompt string, defaultVal uint64) uint64 {
 	fmt.Printf("%s (default: %d): ", prompt, defaultVal)
 
 	reader := bufio.NewReader(os.Stdin)
@@ -22,7 +28,7 @@ func readUint64WithDefault(prompt string, defaultVal uint64) uint64 {
 	return val
 }
 
-func readUint32WithDefault(prompt string, defaultVal uint32) uint32 {
+func ReadUint32WithDefault(prompt string, defaultVal uint32) uint32 {
 	fmt.Printf("%s (default: %d): ", prompt, defaultVal)
 
 	reader := bufio.NewReader(os.Stdin)
@@ -42,7 +48,7 @@ func readUint32WithDefault(prompt string, defaultVal uint32) uint32 {
 	return uint32(val)
 }
 
-func readStringWithDefault(prompt string, defaultVal string) string {
+func ReadStringWithDefault(prompt string, defaultVal string) string {
 	fmt.Printf("%s (default: %s): ", prompt, defaultVal)
 
 	reader := bufio.NewReader(os.Stdin)
@@ -56,8 +62,7 @@ func readStringWithDefault(prompt string, defaultVal string) string {
 	return input
 }
 
-
-func readYesNo(prompt string) bool {
+func ReadYesNo(prompt string) bool {
 	fmt.Printf("%s (y/n): ", prompt)
 
 	reader := bufio.NewReader(os.Stdin)

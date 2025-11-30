@@ -10,7 +10,7 @@ import (
 	"os"
 	"sync"
 	dm "turbobloom/distribute/models" // distribute models
-	sm "turbobloom/models"            // shared models
+	sm "turbobloom/shared"            // shared models
 )
 
 var keyMutex sync.Mutex
