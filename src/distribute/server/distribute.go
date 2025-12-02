@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"sync"
+	"time"
 	dm "turbobloom/distribute/models" // distribute models
 	sm "turbobloom/shared"            // shared models
 )
@@ -47,49 +48,51 @@ func updateCount(params dm.Parameters) {
 	}
 }
 
-func calculateAColumn(ind uint32, config dm.Parameters) []uint64 {
+func generateGColumn(config dm.Parameters) []uint64 {
+	rand.Seed(time.Now().UnixNano())
+	g := make([]uint64, config.Lambda+1)
+	len := config.Lambda + 1
+	for i := 0; i < int(len); i++ {
+		g[i] = uint64(rand.Intn(2))
+	}
+
+	return g
+}
+
+func calculateAColumn(g []uint64, config dm.Parameters) []uint64 {
 	a_col := make([]uint64, config.Lambda+1)
 	for i := uint32(0); i <= config.Lambda; i++ {
 		a_col[i] = 0
 		for k := uint32(0); k <= config.Lambda; k++ {
-			a_col[i] += (config.D[i][k] * config.G[ind][k]) % config.Q
+			a_col[i] += (config.D[i][k] * g[k]) % config.Q
 		}
 		a_col[i] %= config.Q
 	}
 	return a_col
 }
 
-var ErrKeysExhausted = errors.New("keys are exhausted")
+// var ErrKeysExhausted = errors.New("keys are exhausted")
 
-func getNextKey() (uint32, []uint64, []uint64, uint64, error) {
+func getNextKey() (uint32, []uint64, []uint64, uint64) {
 	keyMutex.Lock()
 	defer keyMutex.Unlock()
 
 	var config dm.Parameters = readParams()
 
-	if config.Count == config.N {
-		// we might want to delete the file and exit the server
-		return 0, []uint64{}, []uint64{}, 0, ErrKeysExhausted
-	}
-
 	id := config.Count
 	config.Count += 1
 	// I want this to be executed in the current lock
 	updateCount(config)
-	g_col := config.G[id]
-	a_col := calculateAColumn(id, config)
+	g_col := generateGColumn(config)
+	a_col := calculateAColumn(g_col, config)
 
-	return id, g_col, a_col, config.Q, nil
+	return id, g_col, a_col, config.Q
 }
 
 func distributeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received key distribution request")
 
-	nodeId, g_col, a_col, q, err := getNextKey()
-	if errors.Is(err, ErrKeysExhausted) {
-		http.Error(w, err.Error(), http.StatusTeapot) // whatever, can do 404 also
-		return
-	}
+	nodeId, g_col, a_col, q := getNextKey()
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
