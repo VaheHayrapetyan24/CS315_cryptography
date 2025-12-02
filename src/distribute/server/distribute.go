@@ -10,7 +10,7 @@ import (
 	"os"
 	"sync"
 	dm "turbobloom/distribute/models" // distribute models
-	sm "turbobloom/models"            // shared models
+	sm "turbobloom/shared"            // shared models
 )
 
 var keyMutex sync.Mutex
@@ -61,7 +61,7 @@ func calculateAColumn(ind uint32, config dm.Parameters) []uint64 {
 
 var ErrKeysExhausted = errors.New("keys are exhausted")
 
-func getNextKey() (uint32, []uint64, []uint64, error) {
+func getNextKey() (uint32, []uint64, []uint64, uint64, error) {
 	keyMutex.Lock()
 	defer keyMutex.Unlock()
 
@@ -69,7 +69,7 @@ func getNextKey() (uint32, []uint64, []uint64, error) {
 
 	if config.Count == config.N {
 		// we might want to delete the file and exit the server
-		return 0, []uint64{}, []uint64{}, ErrKeysExhausted
+		return 0, []uint64{}, []uint64{}, 0, ErrKeysExhausted
 	}
 
 	id := config.Count
@@ -79,13 +79,13 @@ func getNextKey() (uint32, []uint64, []uint64, error) {
 	g_col := config.G[id]
 	a_col := calculateAColumn(id, config)
 
-	return id, g_col, a_col, nil
+	return id, g_col, a_col, config.Q, nil
 }
 
 func distributeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received key distribution request")
 
-	nodeId, g_col, a_col, err := getNextKey()
+	nodeId, g_col, a_col, q, err := getNextKey()
 	if errors.Is(err, ErrKeysExhausted) {
 		http.Error(w, err.Error(), http.StatusTeapot) // whatever, can do 404 also
 		return
@@ -96,6 +96,7 @@ func distributeHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := sm.DistributeResponse{
 		Id:   nodeId,
+		Q:    q,
 		Gcol: g_col,
 		Acol: a_col,
 	}
