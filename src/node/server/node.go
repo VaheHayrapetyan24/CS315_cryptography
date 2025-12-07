@@ -86,7 +86,7 @@ func readParams(filepath string) shared.DistributeResponse {
 
 func main() {
 	portPtr := flag.Int("port", 8080, "Port to run the server on")
-	filename := flag.String("config", "./parameters/parameters.json", "Relative path to parameters file")
+	filename := flag.String("config", "./node/parameters/parameters.json", "Relative path to parameters file")
 	flag.Parse()
 
 	nodeConfig := readParams(*filename)

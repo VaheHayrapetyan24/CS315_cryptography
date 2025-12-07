@@ -87,8 +87,8 @@ func sendMessage(baseURL string, payload MessagePayload) error {
 func main() {
 	fmt.Println("Enter parameters:")
 
-	configPath := shared.ReadStringWithDefault("Enter config file path", "./parameters/parameters.json")
-	targetURL := shared.ReadStringWithDefault("Enter target node URL", "http://localhost:8081")
+	configPath := shared.ReadStringWithDefault("Enter config file path", "./node/parameters/parameters.json")
+	targetURL := shared.ReadStringWithDefault("Enter target node URL", "http://localhost:8080")
 	message := shared.ReadStringWithDefault("Enter message", "Hello!")
 
 	// Validate target URL
