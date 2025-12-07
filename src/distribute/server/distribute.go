@@ -109,7 +109,7 @@ func distributeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	filename = flag.String("config", "./parameters/parameters.json", "Relative path to parameters file")
+	filename = flag.String("config", "./distribute/parameters/parameters.json", "Relative path to parameters file")
 	flag.Parse()
 
 	readParams()

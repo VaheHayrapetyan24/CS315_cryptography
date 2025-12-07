@@ -42,7 +42,7 @@ func main() {
 	fmt.Println("Enter parameters:")
 
 	distributeUrl := shared.ReadStringWithDefault("Enter distribute server URL", "http://localhost:8080/distribute")
-	filePath := shared.ReadStringWithDefault("Enter relative path to store parameters file", "./parameters/parameters.json")
+	filePath := shared.ReadStringWithDefault("Enter relative path to store parameters file", "./node/parameters/parameters.json")
 
 	if _, err := os.Stat(filePath); err == nil {
 		if !shared.ReadYesNo("File already exists. Overwrite?") {

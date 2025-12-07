@@ -42,13 +42,13 @@ func main() {
 	fmt.Println("Enter cryptographic parameters:")
 
 	// Q with default 19
-	q := shared.ReadUint64WithDefault("Enter Q", 19)
+	q := shared.ReadUint64WithDefault("Enter Q", 8782933297)
 
 	// N with default 5
-	n := shared.ReadUint32WithDefault("Enter N", 5)
+	n := shared.ReadUint32WithDefault("Enter N", 500)
 
 	// Lambda with default 2
-	lambda := shared.ReadUint32WithDefault("Enter Lambda", 2)
+	lambda := shared.ReadUint32WithDefault("Enter Lambda", 2000)
 
 	fmt.Printf("\nParameters set:\n")
 	fmt.Printf("Q: %d\n", q)
@@ -56,7 +56,7 @@ func main() {
 	fmt.Printf("Lambda: %d\n", lambda)
 
 	// Ask for file path to store parameters
-	filepath := shared.ReadStringWithDefault("\nEnter relative path to store parameters file", "./parameters/parameters.json")
+	filepath := shared.ReadStringWithDefault("\nEnter relative path to store parameters file", "./distribute/parameters/parameters.json")
 
 	// Check if file exists
 	if _, err := os.Stat(filepath); err == nil {
