@@ -118,11 +118,17 @@ func main() {
 	k := nodeUtils.GetKey(remoteGcol, myConfig.Acol, myConfig.Q)
 	fmt.Printf("\nCalculated key: %v\n", k)
 
-	// Send message with local Gcol and plaintext message
-	fmt.Printf("\nSending message to %s/message\n", targetURL)
+	// Encrypt the message using the derived key
+	encryptedMessage, err := nodeUtils.EncryptStringAES128CBC(k, message)
+	if err != nil {
+		log.Fatalf("Error encrypting message: %v", err)
+	}
+
+	// Send message with local Gcol and encrypted message
+	fmt.Printf("\nSending encrypted message to %s/message\n", targetURL)
 	payload := MessagePayload{
 		Gcol:    myConfig.Gcol,
-		Message: message,
+		Message: encryptedMessage,
 	}
 
 	err = sendMessage(targetURL, payload)

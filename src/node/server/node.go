@@ -36,14 +36,19 @@ func messageHandler(w http.ResponseWriter, r *http.Request, nodeConfig shared.Di
 	}
 
 	log.Printf("Received message with Gcol of length %d: %v", len(payload.Gcol), payload.Gcol)
-	log.Printf("Message content: %s", payload.Message)
+	log.Printf("Encrypted message content: %s", payload.Message)
 
-	// Calculate the key using the received Gcol and the node's Acol
 	k := nodeUtils.GetKey(payload.Gcol, nodeConfig.Acol, nodeConfig.Q)
 	log.Printf("Calculated key: %v", k)
 
-	// TODO: Process the message using the calculated key
-	// For now, just acknowledge receipt
+	plaintext, err := nodeUtils.DecryptStringAES128CBC(k, payload.Message)
+	if err != nil {
+		log.Printf("Failed to decrypt message: %v", err)
+		http.Error(w, "Failed to decrypt message", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Decrypted message content: %s", plaintext)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

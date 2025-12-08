@@ -99,4 +99,16 @@ The program will:
 1. Load Node B's configuration
 2. Fetch Node A's Gcol from `http://localhost:8080/gcol`
 3. Calculate the shared key
-4. Send Node B's Gcol and the message to `http://localhost:8080/message`
+4. Encrypt the message using AES-128-CBC with the shared key
+5. Send Node B's Gcol and the encrypted message to `http://localhost:8080/message`
+
+On Node A:
+- The server uses its own Acol and the sender's Gcol to derive the same shared key.
+- It decrypts the received ciphertext with AES-128-CBC and logs the recovered plaintext.
+
+## Encryption Details
+
+- **Key derivation**: each pair of nodes derives a shared integer key `k` via the Blom/TurboBlom construction (`GetKey`).
+- **Symmetric key**: `k` is converted to a 128-bit AES key by hashing its decimal string with SHA-256 and taking the first 16 bytes.
+- **Mode**: AES-128-CBC with PKCS#7 padding, random IV per message.
+- **Wire format**: the `message` field in the `/message` JSON payload now contains a base64-encoded string of `(IV || ciphertext)`; the receiver decodes and decrypts it before processing.
